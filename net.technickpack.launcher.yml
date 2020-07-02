@@ -1,0 +1,63 @@
+app-id: net.technicpack.launcher
+default-branch: stable
+runtime: org.freedesktop.Platform
+runtime-version: '19.08'
+sdk: org.freedesktop.Sdk
+command: /app/bin/technic-launcher
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.openjdk8
+
+modules:
+
+  # Initialize java SDK extensions
+  - name: openjdk
+    buildsystem: simple
+    build-commands:
+      - "/usr/lib/sdk/openjdk/install.sh"
+
+  - name: launcher
+    buildsystem: simple
+    build-commands:
+      - "mkdir -p /app/bin"
+      - "cp launcher-4.0-0.jar /app/bin/technic-launcher.jar"
+    sources:
+      - type: file
+        path: "target/launcher-4.0-0.jar"
+
+  - name: wrapper
+    buildsystem: simple
+    build-commands:
+      - "mkdir -p /app/bin/"
+      - "cp -r technic-launcher /app/bin/technic-launcher"
+    sources:
+      - type: file
+        path: "src/main/resources/flatpak/technic-launcher"
+
+
+  - name: techniclauncher-icon
+    buildsystem: simple
+    build-commands:
+      - "mkdir -p /app/share/icons/hicolor/32x32/apps/"
+      - "cp -r net.technicpack.launcher.png /app/share/icons/hicolor/32x32/apps/net.technicpack.launcher.png"
+    sources:
+      - type: file
+        path: src/main/resources/flatpak/net.technicpack.launcher.png
+
+  - name: techniclauncher-desktop
+    buildsystem: simple
+    build-commands:
+      - "mkdir -p /app/share/applications"
+      - "cp -r net.technicpack.launcher.desktop /app/share/applications/"
+    sources:
+      - type: file
+        path: src/main/resources/flatpak/net.technicpack.launcher.desktop
+
+finish-args:
+  - --socket=pulseaudio
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --share=network
+  - --env=PATH=/app/jre/bin:/usr/bin
+  # Not strictly needed, but putting saves in private flatpak dir would probably confuse users
+  - --filesystem=~/.technic/

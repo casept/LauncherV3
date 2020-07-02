@@ -13,3 +13,9 @@ module_launcherv3.xml
 launcherv3.xml
 launcherv3.properties
 dependency-reduced-pom.xml
+
+# Flatpak files
+.flatpak-builder/
+technic.flatpak
+build-dir/
+repo/

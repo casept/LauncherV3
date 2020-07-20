@@ -30,6 +30,7 @@ import net.technicpack.solder.ISolderPackApi;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings({"unused"})
 public class SolderPackInfo extends RestObject implements PackInfo {
 
     private String name;
@@ -163,6 +164,11 @@ public class SolderPackInfo extends RestObject implements PackInfo {
     }
 
     public void setLocal() { isLocal = true; }
+
+    @Override
+    public boolean hasSolder() {
+        return true;
+    }
 
     @Override
     public String toString() {

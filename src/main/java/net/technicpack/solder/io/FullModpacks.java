@@ -23,6 +23,7 @@ import net.technicpack.rest.RestObject;
 
 import java.util.LinkedHashMap;
 
+@SuppressWarnings({"unused"})
 public class FullModpacks extends RestObject {
 
     private LinkedHashMap<String, SolderPackInfo> modpacks;

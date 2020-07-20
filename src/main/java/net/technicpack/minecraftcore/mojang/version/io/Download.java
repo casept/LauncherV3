@@ -1,5 +1,6 @@
 package net.technicpack.minecraftcore.mojang.version.io;
 
+@SuppressWarnings({"unused"})
 public class Download {
 
 	private String sha1;

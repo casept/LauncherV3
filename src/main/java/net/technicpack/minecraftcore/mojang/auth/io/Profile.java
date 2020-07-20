@@ -19,6 +19,7 @@
 
 package net.technicpack.minecraftcore.mojang.auth.io;
 
+@SuppressWarnings({"unused"})
 public class Profile {
 	private String id;
 	private String name;

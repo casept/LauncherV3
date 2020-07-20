@@ -25,6 +25,7 @@ import net.technicpack.minecraftcore.mojang.auth.io.User;
 
 import java.util.Arrays;
 
+@SuppressWarnings({"unused"})
 public class AuthResponse extends Response implements IAuthResponse {
     private String accessToken;
     private String clientToken;

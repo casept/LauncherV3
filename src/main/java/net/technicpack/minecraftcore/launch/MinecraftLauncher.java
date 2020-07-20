@@ -34,6 +34,7 @@ import net.technicpack.minecraftcore.mojang.version.io.CompleteVersion;
 import net.technicpack.minecraftcore.mojang.version.io.Library;
 import net.technicpack.minecraftcore.mojang.version.io.argument.ArgumentList;
 import net.technicpack.platform.IPlatformApi;
+import net.technicpack.utilslib.JavaUtils;
 import net.technicpack.utilslib.OperatingSystem;
 import net.technicpack.utilslib.Utils;
 import org.apache.commons.text.StringSubstitutor;
@@ -195,6 +196,11 @@ public class MinecraftLauncher {
         commands.addUnique("-Djava.library.path=" + nativesDir);
         // Tell forge 1.5 to download from our mirror instead
         commands.addUnique("-Dfml.core.libraries.mirror=http://mirror.technicpack.net/Technic/lib/fml/%s");
+
+        // This is required because we strip META-INF from the minecraft.jar
+        commands.addUnique("-Dfml.ignoreInvalidMinecraftCertificates=true");
+        commands.addUnique("-Dfml.ignorePatchDiscrepancies=true");
+
         commands.addUnique("-Dminecraft.applet.TargetDirectory=" + pack.getInstalledDirectory().getAbsolutePath());
         commands.addUnique("-Duser.language=en");
 
@@ -264,7 +270,7 @@ public class MinecraftLauncher {
         // HACK
         boolean isLegacy = MojangUtils.isLegacyVersion(version.getId());
 
-        final boolean needsWrapper = MojangUtils.needsForgeWrapper(version);
+        final boolean hasModernForge = MojangUtils.hasModernForge(version);
         final String[] versionIdParts = version.getId().split("-");
         final boolean is1_12_2 = versionIdParts[0].equals("1.12.2");
 
@@ -274,14 +280,11 @@ public class MinecraftLauncher {
                 continue;
             }
 
-            final boolean isForge = library.getName().startsWith("net.minecraftforge:minecraftforge") ||
-                    library.getName().startsWith("net.minecraftforge:forge:");
-
             // If minecraftforge is described in the libraries, skip it
             // HACK - Please let us get rid of this when we move to actually hosting forge,
             // or at least only do it if the users are sticking with modpack.jar
-            if (isForge) {
-                if (needsWrapper) {
+            if (library.isForge()) {
+                if (hasModernForge) {
                     if (!is1_12_2 && !library.getName().endsWith(":launcher")) {
                         continue;
                     } else if (is1_12_2 && !library.getName().endsWith(":universal")) {
@@ -296,7 +299,7 @@ public class MinecraftLauncher {
                 continue;
             }
 
-            File file = new File(directories.getCacheDirectory(), library.getArtifactPath().replace("${arch}", System.getProperty("sun.arch.data.model")));
+            File file = new File(directories.getCacheDirectory(), library.getArtifactPath().replace("${arch}", JavaUtils.getJavaBitness()));
             if (!file.isFile() || !file.exists()) {
                 throw new RuntimeException("Library " + library.getName() + " not found.");
             }
@@ -308,7 +311,7 @@ public class MinecraftLauncher {
         }
 
         // Add the modpack.jar to the classpath, if it exists and minecraftforge is not a library already
-        if (!(MojangUtils.needsForgeWrapper(version))) {
+        if (!(MojangUtils.hasModernForge(version))) {
             File modpack = new File(pack.getBinDir(), "modpack.jar");
             if (modpack.exists()) {
                 if (result.length() > 1) {

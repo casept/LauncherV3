@@ -19,6 +19,7 @@
 
 package net.technicpack.platform.io;
 
+@SuppressWarnings({"unused"})
 public class SearchResult {
     private int id;
     private String name;

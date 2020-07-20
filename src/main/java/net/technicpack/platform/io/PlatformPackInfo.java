@@ -28,6 +28,7 @@ import net.technicpack.rest.io.Resource;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings({"unused"})
 public class PlatformPackInfo extends RestObject implements PackInfo {
     private String name;
     private String displayName;
@@ -89,11 +90,17 @@ public class PlatformPackInfo extends RestObject implements PackInfo {
 
     @Override
     public String getRecommended() {
+        if (hasSolder())
+            return null;
+
         return version;
     }
 
     @Override
     public String getLatest() {
+        if (hasSolder())
+            return null;
+
         return version;
     }
 
@@ -112,6 +119,12 @@ public class PlatformPackInfo extends RestObject implements PackInfo {
 
     @Override
     public List<String> getBuilds() {
+        if (hasSolder()) {
+            // If this is a Solder modpack, Platform modpack version has no play in the builds list
+            // Code can actually reach this if the Solder instance is offline, due to how combined modpack info works
+            return new ArrayList<>(0);
+        }
+
         List<String> builds = new ArrayList<String>();
         builds.add(version);
         return builds;
@@ -170,7 +183,14 @@ public class PlatformPackInfo extends RestObject implements PackInfo {
 
     public void setLocal() { isLocal = true; }
     @Override
-    public boolean isLocal() { return isLocal; }
+    public boolean isLocal() {
+        // If this modpack has a Solder instance set, and code has reached this point, that means that Solder is
+        // unreachable for some reason, and we should consider its Solder to be offline (and mark the pack as local)
+        if (hasSolder())
+            return true;
+
+        return isLocal;
+    }
 
     @Override
     public boolean isOfficial() { return isOfficial; }

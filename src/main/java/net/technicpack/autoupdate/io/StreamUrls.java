@@ -19,6 +19,7 @@
 
 package net.technicpack.autoupdate.io;
 
+@SuppressWarnings({"unused"})
 public class StreamUrls {
     private String jar;
     private String exe;

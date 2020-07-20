@@ -21,6 +21,7 @@ package net.technicpack.platform.io;
 
 import java.util.Date;
 
+@SuppressWarnings({"unused"})
 public class AuthorshipInfo {
     private String user;
     private String avatar;

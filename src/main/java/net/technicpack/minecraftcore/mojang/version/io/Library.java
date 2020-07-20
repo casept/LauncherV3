@@ -21,7 +21,6 @@ package net.technicpack.minecraftcore.mojang.version.io;
 
 import net.technicpack.launchercore.TechnicConstants;
 import net.technicpack.launchercore.exception.DownloadException;
-import net.technicpack.launchercore.mirror.MirrorStore;
 import net.technicpack.utilslib.OperatingSystem;
 import net.technicpack.utilslib.Utils;
 
@@ -32,6 +31,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@SuppressWarnings({"unused"})
 public class Library {
     private static final String[] FALLBACK = {
         "https://libraries.minecraft.net/",
@@ -154,7 +154,24 @@ public class Library {
         return filename;
     }
 
-    public String getDownloadUrl(String path, MirrorStore mirrorStore) throws DownloadException {
+    public String getArtifactSha1(String nativeClassifier) {
+        if (downloads == null)
+            return null;
+
+        Artifact artifact;
+
+        if (nativeClassifier != null)
+            artifact = downloads.getClassifier(nativeClassifier);
+        else
+            artifact = downloads.getArtifact();
+
+        if (artifact != null)
+            return artifact.getSha1();
+
+        return null;
+    }
+
+    public String getDownloadUrl(String path) throws DownloadException {
         Set<String> possibleUrls = new LinkedHashSet<>(8);
 
         // Check the old-style URL (Forge 1.6, I think?)
@@ -192,12 +209,16 @@ public class Library {
         }
 
         for (String possibleUrl : possibleUrls) {
-            if (Utils.pingHttpURL(possibleUrl, mirrorStore)) {
+            if (Utils.pingHttpURL(possibleUrl)) {
                 return possibleUrl;
             }
         }
 
         throw new DownloadException("Failed to download library " + path + ": no mirror found");
+    }
+
+    public boolean isForge() {
+        return name.startsWith("net.minecraftforge:forge:") || name.startsWith("net.minecraftforge:minecraftforge:");
     }
 
 }

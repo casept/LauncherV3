@@ -1,5 +1,6 @@
 package net.technicpack.minecraftcore.mojang.version.io;
 
+@SuppressWarnings({"unused"})
 public class AssetIndex {
 
 	private String id;

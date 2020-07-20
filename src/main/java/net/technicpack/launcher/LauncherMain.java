@@ -56,8 +56,6 @@ import net.technicpack.launchercore.launch.java.source.FileJavaSource;
 import net.technicpack.launchercore.launch.java.source.InstalledJavaSource;
 import net.technicpack.launchercore.logging.BuildLogFormatter;
 import net.technicpack.launchercore.logging.RotatingFileHandler;
-import net.technicpack.launchercore.mirror.MirrorStore;
-import net.technicpack.launchercore.mirror.secure.rest.JsonWebSecureMirror;
 import net.technicpack.launchercore.modpacks.ModpackModel;
 import net.technicpack.launchercore.modpacks.PackLoader;
 import net.technicpack.launchercore.modpacks.resources.PackImageStore;
@@ -88,6 +86,7 @@ import net.technicpack.ui.components.ConsoleHandler;
 import net.technicpack.ui.components.LoggerOutputStream;
 import net.technicpack.ui.controls.installation.SplashScreen;
 import net.technicpack.ui.lang.ResourceLoader;
+import net.technicpack.utilslib.JavaUtils;
 import net.technicpack.utilslib.OperatingSystem;
 import net.technicpack.utilslib.Utils;
 import org.apache.commons.io.FileUtils;
@@ -101,6 +100,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -278,9 +279,20 @@ public class LauncherMain {
             }
         }).start();
 
+        // Startup debug messages
         Utils.getLogger().info("OS: " + System.getProperty("os.name").toLowerCase(Locale.ENGLISH));
         Utils.getLogger().info("Identified as "+ OperatingSystem.getOperatingSystem().getName());
-        Utils.getLogger().info("Java: " + System.getProperty("java.version") + " " + System.getProperty("sun.arch.data.model", "32") + "-bit");
+        Utils.getLogger().info("Java: " + System.getProperty("java.version") + " " + JavaUtils.getJavaBitness() + "-bit (" + System.getProperty("os.arch") + ")");
+        final String[] domains = {"minecraft.net", "session.minecraft.net", "textures.minecraft.net", "libraries.minecraft.net", "authserver.mojang.com", "account.mojang.com", "technicpack.net", "launcher.technicpack.net", "api.technicpack.net", "mirror.technicpack.net", "solder.technicpack.net", "files.minecraftforge.net"};
+        for (String domain : domains) {
+            try {
+                Collection<InetAddress> inetAddresses = Arrays.asList(InetAddress.getAllByName(domain));
+                String ips = inetAddresses.stream().map(InetAddress::getHostAddress).collect(Collectors.joining(", "));
+                Utils.getLogger().info(domain + " resolves to [" + ips + "]");
+            } catch (UnknownHostException ex) {
+                Utils.getLogger().log(Level.SEVERE, "Failed to resolve " + domain + ": " + ex.toString());
+            }
+        }
 
         final SplashScreen splash = new SplashScreen(resources.getImage("launch_splash.png"), 0);
         Color bg = LauncherFrame.COLOR_FORMELEMENT_INTERNAL;
@@ -301,25 +313,22 @@ public class LauncherMain {
         IUserStore<MojangUser> users = TechnicUserStore.load(new File(directories.getLauncherDirectory(),"users.json"));
         UserModel userModel = new UserModel(users, new AuthenticationService());
 
-        MirrorStore mirrorStore = new MirrorStore(userModel);
-        mirrorStore.addSecureMirror("mirror.technicpack.net", new JsonWebSecureMirror("http://mirror.technicpack.net/", "mirror.technicpack.net"));
-
         IModpackResourceType iconType = new IconResourceType();
         IModpackResourceType logoType = new LogoResourceType();
         IModpackResourceType backgroundType = new BackgroundResourceType();
 
         PackResourceMapper iconMapper = new PackResourceMapper(directories, resources.getImage("icon.png"), iconType);
-        ImageRepository<ModpackModel> iconRepo = new ImageRepository<ModpackModel>(iconMapper, new PackImageStore(iconType, mirrorStore, userModel));
-        ImageRepository<ModpackModel> logoRepo = new ImageRepository<ModpackModel>(new PackResourceMapper(directories, resources.getImage("modpack/ModImageFiller.png"), logoType), new PackImageStore(logoType, mirrorStore, userModel));
-        ImageRepository<ModpackModel> backgroundRepo = new ImageRepository<ModpackModel>(new PackResourceMapper(directories, null, backgroundType), new PackImageStore(backgroundType, mirrorStore, userModel));
+        ImageRepository<ModpackModel> iconRepo = new ImageRepository<ModpackModel>(iconMapper, new PackImageStore(iconType));
+        ImageRepository<ModpackModel> logoRepo = new ImageRepository<ModpackModel>(new PackResourceMapper(directories, resources.getImage("modpack/ModImageFiller.png"), logoType), new PackImageStore(logoType));
+        ImageRepository<ModpackModel> backgroundRepo = new ImageRepository<ModpackModel>(new PackResourceMapper(directories, null, backgroundType), new PackImageStore(backgroundType));
 
-        ImageRepository<IUserType> skinRepo = new ImageRepository<IUserType>(new TechnicFaceMapper(directories, resources), new MinotarFaceImageStore("https://minotar.net/", mirrorStore));
+        ImageRepository<IUserType> skinRepo = new ImageRepository<IUserType>(new TechnicFaceMapper(directories, resources), new MinotarFaceImageStore("https://minotar.net/"));
 
-        ImageRepository<AuthorshipInfo> avatarRepo = new ImageRepository<AuthorshipInfo>(new TechnicAvatarMapper(directories, resources), new WebAvatarImageStore(mirrorStore));
+        ImageRepository<AuthorshipInfo> avatarRepo = new ImageRepository<AuthorshipInfo>(new TechnicAvatarMapper(directories, resources), new WebAvatarImageStore());
 
-        HttpSolderApi httpSolder = new HttpSolderApi(settings.getClientId(), userModel);
+        HttpSolderApi httpSolder = new HttpSolderApi(settings.getClientId());
         ISolderApi solder = new CachedSolderApi(directories, httpSolder, 60 * 60);
-        HttpPlatformApi httpPlatform = new HttpPlatformApi("http://api.technicpack.net/", mirrorStore, buildNumber.getBuildNumber());
+        HttpPlatformApi httpPlatform = new HttpPlatformApi("http://api.technicpack.net/", buildNumber.getBuildNumber());
 
         IPlatformApi platform = new ModpackCachePlatformApi(httpPlatform, 60 * 60, directories);
         IPlatformSearchApi platformSearch = new HttpPlatformSearchApi("http://api.technicpack.net/", buildNumber.getBuildNumber());
@@ -342,7 +351,7 @@ public class LauncherMain {
 
         MinecraftLauncher launcher = new MinecraftLauncher(platform, directories, userModel, javaVersions, buildNumber);
         ModpackInstaller modpackInstaller = new ModpackInstaller(platform, settings.getClientId());
-        Installer installer = new Installer(startupParameters, mirrorStore, directories, modpackInstaller, launcher, settings, iconMapper);
+        Installer installer = new Installer(startupParameters, directories, modpackInstaller, launcher, settings, iconMapper);
 
         IDiscordApi discordApi = new HttpDiscordApi("https://discord.com/api/");
         discordApi = new CacheDiscordApi(discordApi, 600, 60);

@@ -19,7 +19,7 @@
 
 package net.technicpack.minecraftcore.mojang.auth.io;
 
-
+@SuppressWarnings({"unused"})
 public class User {
 	private String id;
 	private UserProperties properties;

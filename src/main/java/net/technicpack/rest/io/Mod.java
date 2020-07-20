@@ -19,6 +19,7 @@
 
 package net.technicpack.rest.io;
 
+@SuppressWarnings({"unused"})
 public class Mod extends Resource {
     private String name;
     private String version;
